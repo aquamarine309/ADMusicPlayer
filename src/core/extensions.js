@@ -301,7 +301,7 @@ window.playNote = (function() {
   const xml = new XMLHttpRequest();
   let data;
   xml.responseType = 'arraybuffer';
-  xml.open('GET', '../../public/audio/c4.mp3', true);
+  xml.open('GET', 'public/audio/c4.mp3', true);
   xml.onload = function() {
     // 音源ファイルをバイナリデータからデコード
     ctx.decodeAudioData(

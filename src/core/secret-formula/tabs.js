@@ -502,7 +502,7 @@ export const tabs = [
     name: "Leap",
     UIClass: "o-tab-btn--leap",
     hideAt: 2.5,
-    condition: () => player.records.totalAntimatter.gte(100),
+    condition: () => false,//player.records.totalAntimatter.gte(100),
     id: 11,
     hidable: true,
     subtabs: [
