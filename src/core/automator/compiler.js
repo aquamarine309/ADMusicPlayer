@@ -245,28 +245,38 @@ class Validator extends BaseVisitor {
     }
   }
   
-  musicNote(ctx) {
-    if (ctx.$value) return ctx.$value;
-    let errToken, octave, pitch, offset;
+  musicNoteList(ctx) {
+    if (ctx.$cached !== undefined) return ctx.$cached;
+    const noteOut = [];
+    for (const mne of ctx.musicNoteEntry) this.visit(mne, noteOut);
+    const positionRange = Validator.getPositionRange(ctx);
+    ctx.$cached = {
+      notes: noteOut,
+      image: this.rawText.substr(positionRange.startOffset, positionRange.endOffset - positionRange.startOffset + 1)
+    };
+    return ctx.$cached;
+  }
+  
+  musicNoteEntry(ctx, noteOut) {
+    let octave, pitch, offset;
     if (ctx.NoteLiteral) {
       let indexOffset = 0;
       if (ctx.NoteLiteral[0].image.length === 3) {
         indexOffset = 1;
         switch (ctx.NoteLiteral[0].image[0]) {
-          case "+":
+          case "#":
             offset = 1;
             break;
-          case "_":
+          case "b":
             offset = -1;
             break;
           default:
-            this.addError(ctx, "Unexpect Symbol", "Provide a correct symbol(eg. + or _)");
+            this.addError(ctx, "Unexpect Symbol", "Provide a correct symbol(eg. # or b)");
             return undefined;
         }
       } else {
         offset = 0;
       }
-      
       octave = parseFloat(ctx.NoteLiteral[0].image.substr(1 + indexOffset));
       switch (ctx.NoteLiteral[0].image[indexOffset].toUpperCase()) {
         case "C":
@@ -294,8 +304,7 @@ class Validator extends BaseVisitor {
           this.addError(ctx, "Unexpect Pitch", "Provide a correct note(eg. C or D)");
           return undefined;
       }
-      errToken = ctx.NoteLiteral[0];
-    } else if (!ctx.NumberLiteral || ctx.NumberLiteral[0].isInsertedInRecovery) {
+    } else if (!ctx.NumberLiteral || ctx.NumberLiteral[0].isInsertedIniRecovery) {
       this.addError(ctx, "Missing octave", "Provide a octave of note (eg. 4 or 5)");
       return undefined;
     } else {
@@ -308,8 +317,8 @@ class Validator extends BaseVisitor {
       this.addError(ctx, "Error parsing note", "Provide a properly-formatted note");
       return undefined;
     }
-    ctx.$value = value;
-    return ctx.$value;
+    noteOut.push(value);
+    return;
   }
 
   duration(ctx) {
@@ -318,13 +327,15 @@ class Validator extends BaseVisitor {
       this.addError(ctx, "Missing time unit", "Provide a unit of time (eg. seconds or minutes)");
       return undefined;
     }
-    const value = parseFloat(ctx.NumberLiteral[0].image) * ctx.TimeUnit[0].tokenType.$scale;
+    const $scale = ctx.TimeUnit[0].tokenType.$scale;
+    const scale = typeof $scale === "function" ? $scale() : $scale;
+    const value = parseFloat(ctx.NumberLiteral[0].image) * scale;
     if (isNaN(value)) {
       this.addError(ctx, "Error parsing duration", "Provide a properly-formatted number for time");
       return undefined;
     }
     ctx.$value = value;
-    return ctx.$value;
+    return value;
   }
 
   xHighest(ctx) {

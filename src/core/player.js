@@ -49,6 +49,7 @@ window.player = {
       }
     }
   },
+  bpm: 120,
   buyUntil10: true,
   sacrificed: DC.D0,
   achievementBits: Array.repeat(0, 17),

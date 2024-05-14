@@ -77,15 +77,22 @@ class AutomatorParser extends Parser {
       $.CONSUME(T.TimeUnit);
     });
     
-    $.RULE("musicNote", () => $.OR([
-      { ALT: () => $.CONSUME(T.NoteLiteral) },
-      {
-        ALT: () => {
-          $.CONSUME(T.Note);
-          $.CONSUME(T.NumberLiteral);
-        }
-      }
-    ]));
+    $.RULE("musicNoteEntry", () => {
+      $.OR([
+        { ALT: () => $.CONSUME(T.NoteLiteral) },
+        {
+          ALT: () => {
+           $.CONSUME(T.Note);
+            $.CONSUME(T.NumberLiteral);
+          }
+        },
+      ]);
+      $.OPTION(() => $.CONSUME(T.Comma));
+    });
+    
+    $.RULE("musicNoteList", () => {
+      $.AT_LEAST_ONE(() => $.SUBRULE($.musicNoteEntry));
+    }, { resyncEnabled: false });
 
     $.RULE("eternityChallenge", () => $.OR([
       {

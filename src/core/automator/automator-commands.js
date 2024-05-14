@@ -427,36 +427,95 @@ export const AutomatorCommands = [
     id: "play",
     rule: $ => () => {
       $.CONSUME(T.Play);
-      $.OR([
-        { ALT: () => $.SUBRULE($.musicNote) },
-        { ALT: () => $.CONSUME(T.Identifier) },
-      ]);
+      $.SUBRULE($.musicNoteList);
+      $.OPTION(() => $.SUBRULE($.duration));
     },
     validate: (ctx, V) => {
       ctx.startLine = ctx.Play[0].startLine;
-      let note;
-      if (ctx.Identifier) {
-        if (!V.isValidVarFormat(ctx.Identifier[0], AUTOMATOR_VAR_TYPES.MUSIC_NOTE)) {
-          V.addError(ctx, `Constant ${ctx.Identifier[0].image} is not a valid music note constant`);
-          return false;
-        }
-        const lookup = V.lookupVar(ctx.Identifier[0], AUTOMATOR_VAR_TYPES.MUSIC_NOTE);
-        note = lookup ? lookup.value : lookup;
-      } else {
-        note = V.visit(ctx.musicNote);
+      if (!ctx.musicNoteList) return false;
+      const notes = V.visit(ctx.musicNoteList);
+      if (ctx.duration) {
+        notes.duration = V.visit(ctx.duration);
       }
-      ctx.$musicNote = note;
-      return ctx.$musicNote !== undefined;
+      ctx.$notes = notes;
+      return ctx.$musicNote !== undefined && ctx.$musicNote.length > 0;
     },
     compile: ctx => {
-      return () => {
-        playNote(ctx.$musicNote);
-        return AUTOMATOR_COMMAND_STATUS.NEXT_INSTRUCTION;
+      //console.log(ctx, ctx.$notes)
+      const duration = ctx.$notes.duration;
+      return S => {
+        if (!duration) {
+          for (const note of ctx.$notes.notes) {
+            playNote(note);
+          }
+          return AUTOMATOR_COMMAND_STATUS.NEXT_INSTRUCTION;
+        }
+        const c = ctx.duration[0].children;
+        const timeString = `${c.NumberLiteral[0].image} ${c.TimeUnit[0].image}`;
+        if (S.commandState === null) {
+          S.commandState = { timeMs: 0 };
+          AutomatorData.logCommandEvent(`Pause started (waiting ${timeString})`, ctx.startLine);
+          for (const note of ctx.$notes.notes) {
+            playNote(note);
+          }
+        } else {
+          S.commandState.timeMs += Math.max(Time.unscaledDeltaTime.totalMilliseconds, AutomatorBackend.currentInterval);
+        }
+        const finishPause = S.commandState.timeMs >= duration;
+        if (finishPause) {
+          AutomatorData.logCommandEvent(`Pause finished (waited ${timeString})`, ctx.startLine);
+          return AUTOMATOR_COMMAND_STATUS.NEXT_INSTRUCTION;
+        }
+        return AUTOMATOR_COMMAND_STATUS.NEXT_TICK_SAME_INSTRUCTION;
       };
     },
     blockify: ctx => {
       const c = ctx.musicNote[0].children;
       const blockArg = c.NoteLiteral ? c.NoteLiteral[0].image : `${c.Note[0].image}${c.NumberLiteral[0].image}`;
+      return {
+        ...automatorBlocksMap.PLAY,
+        singleTextInput: blockArg
+      };
+    }
+  },
+  {
+    id: "bpm",
+    rule: $ => () => {
+      $.CONSUME(T.Bpm),
+      $.OR([
+        { ALT: () => $.CONSUME(T.NumberLiteral) },
+        { ALT: () => $.CONSUME(T.Identifier) }
+      ]);
+    },
+    validate: (ctx, V) => {
+      ctx.startLine = ctx.Bpm[0].startLine;
+      let value;
+      if (ctx.Identifier) {
+        if (!V.isValidVarFormat(ctx.Identifier[0], AUTOMATOR_VAR_TYPES.NUMBER)) {
+          V.addError(ctx, `Constant ${ctx.Identifier[0].image} is not a valid number constant`);
+          return false;
+        }
+        const lookup = V.lookupVar(ctx.Identifier[0], AUTOMATOR_VAR_TYPES.NUMBER);
+        value = (lookup ? lookup.value : lookup).toNumber();
+      } else if (ctx.NumberLiteral) {
+        value = parseFloat(ctx.NumberLiteral[0].image, 10);
+      }
+      if (Number.isNaN(value) || !Number.isFinite(value) || value < 0.01 || value >= 1000) {
+        V.addError(ctx, "Fail to set bpm");
+        return false;
+      };
+      ctx.$bpm = value;
+      return true;
+    },
+    compile: ctx => {
+      return () => {
+        player.bpm = ctx.$bpm;
+        AutomatorData.logCommandEvent(`Successful to set bpm to ${format(ctx.$bpm, 0, 3)}`);
+        return AUTOMATOR_COMMAND_STATUS.NEXT_INSTRUCTION;
+      };
+    },
+    blockify: ctx => {
+      const blockArg = ctx.NumberLiteral[0].image;
       return {
         ...automatorBlocksMap.PLAY,
         singleTextInput: blockArg

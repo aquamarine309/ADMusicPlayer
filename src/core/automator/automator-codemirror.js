@@ -63,6 +63,7 @@ CodeMirror.defineSimpleMode("automato", {
     { regex: /studies\s+/ui, token: "keyword", next: "studiesArgs" },
     { regex: /blob\s\s/ui, token: "blob" },
     { regex: /play\s/ui, token: "play", next: "commandArgs" },
+    { regex: /bpm\s/ui, token: "play", next: "commandArgs" },
     {
       // eslint-disable-next-line max-len
       regex: /(auto|if|pause|studies|time[ \t]+theorems?|space[ \t]+theorems?|until|wait|while|black[ \t]+hole|stored?[ \t]+game[ \t]+time|notify)\s/ui,
@@ -145,9 +146,9 @@ CodeMirror.defineSimpleMode("automato", {
     { regex: /nowait(\s|$)/ui, token: "property" },
   ],
   commandArgs: [
+    { regex: /(#|b)?[a-g][1-8]/ui, token: "variable-2" },
     commentRule,
     { sol: true, next: "start" },
-    { regex: /(\+|_)?[a-gA-G][1-8]/ui, token: "variable-2", next: "commandDone" },
     { regex: /<=|>=|<|>/ui, token: "operator" },
     { regex: /nowait(\s|$)/ui, token: "property" },
     { regex: /".*"/ui, token: "string", next: "commandDone" },

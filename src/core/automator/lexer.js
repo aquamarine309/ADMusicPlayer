@@ -275,6 +275,10 @@ createInCategory(TimeUnit, "Hours", /h(ours?)?/i, {
   $autocomplete: "hours",
   $scale: 3600 * 1000,
 });
+createInCategory(TimeUnit, "Beats", /beats?/i, {
+  $autocomplete: "beat",
+  $scale: () => 6e4 / Math.max(player.bpm, 0.01),
+});
 
 createInCategory(Note, "C", /c/i, {
   $autocomplete: "c",
@@ -339,6 +343,7 @@ createKeyword("Blob", /blob\s\s/i, {
   $unlocked: () => false,
 });
 createKeyword("Play", /play/i);
+createKeyword("Bpm", /bpm/i);
 createKeyword("If", /if/i);
 createKeyword("Load", /load/i);
 createKeyword("Notify", /notify/i);
@@ -387,9 +392,9 @@ const ECLiteral = createToken({
 
 const NoteLiteral = createToken({
   name: "NoteLiteral",
-  pattern: /(\+|_)?[a-g][1-8]/i,
+  pattern: /(#|b)?[a-g][1-8]/i,
   longer_alt: Identifier
-})
+});
 
 const LCurly = createToken({ name: "LCurly", pattern: /[ \t]*{/ });
 const RCurly = createToken({ name: "RCurly", pattern: /[ \t]*}/ });
@@ -400,18 +405,18 @@ const Exclamation = createToken({ name: "Exclamation", pattern: /!/, label: "!" 
 
 // The order here is the order the lexer looks for tokens in.
 export const automatorTokens = [
-  HSpace, StringLiteral, StringLiteralSingleQuote, Comment, EOL,
+  HSpace, StringLiteral, StringLiteralSingleQuote, 
+  NoteLiteral, Comment, EOL,
   ComparisonOperator, ...tokenLists.ComparisonOperator,
   LCurly, RCurly, Comma, EqualSign, Pipe, Dash, Exclamation,
   BlackHoleStr, NumberLiteral,
   AutomatorCurrency, ...tokenLists.AutomatorCurrency,
-  ECLiteral,
+  ECLiteral, 
   Keyword, ...keywordTokens,
   PrestigeEvent, ...tokenLists.PrestigeEvent,
   StudyPath, ...tokenLists.StudyPath,
   TimeUnit, ...tokenLists.TimeUnit,
   Note, ...tokenLists.Note,
-  NoteLiteral,
   Identifier,
 ];
 
