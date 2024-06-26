@@ -482,13 +482,13 @@ export const GameStorage = {
     Theme.set(Theme.currentName());
     Glyphs.unseen = [];
     Glyphs.unequipped = [];
-    player.reality.automator.state = AUTOMATOR_MODE.STOP;
     Notations.find(player.options.notation).setAsCurrent(true);
     ADNotations.Settings.exponentCommas.min = 10 ** player.options.notationDigits.comma;
     ADNotations.Settings.exponentCommas.max = 10 ** player.options.notationDigits.notation;
 
     EventHub.dispatch(GAME_EVENT.GAME_LOAD);
     AutomatorBackend.initializeFromSave();
+    AutomatorBackend.pause();
     Lazy.invalidateAll();
 
     const rawDiff = Date.now() - player.lastUpdate;
