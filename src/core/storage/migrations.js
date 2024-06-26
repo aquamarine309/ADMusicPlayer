@@ -421,7 +421,10 @@ export const migrations = {
       if (player.celestials.pelle.doomed) player.dilation.rebuyables[3] = 0;
     }
   },
-
+  26: player => {
+    player.clickingAP = 100;
+  },
+  
   normalizeTimespans(player) {
     player.realTimePlayed *= 100;
     player.totalTimePlayed *= 100;

@@ -164,7 +164,7 @@ export const AutomatorCommands = [
         let currSetting = "";
         if (duration !== undefined) {
           autobuyer.mode = durationMode;
-          autobuyer.time = duration / 1000;
+          autobuyer.time = duration() / 1000;
           // Can't do the units provided in the script because it's been parsed away like 4 layers up the call stack
           currSetting = `${autobuyer.time > 1000 ? formatInt(autobuyer.time) : quantify("second", autobuyer.time)}`;
         } else if (xHighest !== undefined) {
@@ -201,7 +201,7 @@ export const AutomatorCommands = [
       const on = Boolean(ctx.On);
       let input = "";
 
-      if (duration) input = duration;
+      if (duration) input = duration();
       else if (xHighest) input = `${xHighest} x highest`;
       else if (fixedAmount) input = `${fixedAmount}`;
       else input = (on ? "ON" : "OFF");
@@ -393,7 +393,7 @@ export const AutomatorCommands = [
           timeString = `${c.NumberLiteral[0].image} ${c.TimeUnit[0].image}`;
         } else {
           // This is the case for a defined constant; its value was parsed out during validation
-          timeString = TimeSpan.fromMilliseconds(duration);
+          timeString = TimeSpan.fromMilliseconds(duration());
         }
         if (S.commandState === null) {
           S.commandState = { timeMs: 0 };
@@ -401,11 +401,14 @@ export const AutomatorCommands = [
         } else {
           S.commandState.timeMs += Math.max(Time.unscaledDeltaTime.totalMilliseconds, AutomatorBackend.currentInterval);
         }
-        const finishPause = S.commandState.timeMs >= duration;
+        S.commandState.timeMs += pauseTime;
+        const finishPause = S.commandState.timeMs >= duration();
         if (finishPause) {
+          pauseTime = S.commandState.timeMs - duration();
           AutomatorData.logCommandEvent(`Pause finished (waited ${timeString})`, ctx.startLine);
           return AUTOMATOR_COMMAND_STATUS.NEXT_INSTRUCTION;
         }
+        pauseTime = 0;
         return AUTOMATOR_COMMAND_STATUS.NEXT_TICK_SAME_INSTRUCTION;
       };
     },
@@ -427,53 +430,154 @@ export const AutomatorCommands = [
     id: "play",
     rule: $ => () => {
       $.CONSUME(T.Play);
+      $.OPTION(() => $.SUBRULE($.instrument));
       $.SUBRULE($.musicNoteList);
-      $.OPTION(() => $.SUBRULE($.duration));
+      $.OPTION1(() => $.SUBRULE($.duration));
     },
     validate: (ctx, V) => {
       ctx.startLine = ctx.Play[0].startLine;
       if (!ctx.musicNoteList) return false;
       const notes = V.visit(ctx.musicNoteList);
       if (ctx.duration) {
-        notes.duration = V.visit(ctx.duration);
+        ctx.$duration = V.visit(ctx.duration);
+      }
+      if (ctx.instrument) {
+        ctx.$instrument = V.visit(ctx.instrument);
+      } else {
+        ctx.$instrument = player.instrument;
+      }
+      const range = instrumentsRange[ctx.$instrument];
+      if (notes.notes.some(n => (n < range[0] || n >= range[1]) && n !== MUTE_INDEX)) {
+        V.addError(ctx, `Unexpected Pitch ${formatInt(notes.notes.find(n => n < range[0] || n >= range[1]))}`, `The pitches range is ${formatInt(range[0])}~${formatInt(range[1])}`);
+        return false;
       }
       ctx.$notes = notes;
-      return ctx.$musicNote !== undefined && ctx.$musicNote.length > 0;
+      return ctx.notes !== undefined;
     },
     compile: ctx => {
-      //console.log(ctx, ctx.$notes)
-      const duration = ctx.$notes.duration;
+      const getDuration = ctx.$duration;
+      const instrument = ctx.$instrument;
+      function play(duration) {
+        for (const note of ctx.$notes.notes) {
+          if (note === MUTE_INDEX) continue;
+          playNote(note, instrument, duration);
+        }
+      };
       return S => {
-        if (!duration) {
-          for (const note of ctx.$notes.notes) {
-            playNote(note);
-          }
+        if (!getDuration) {
+          play();
           return AUTOMATOR_COMMAND_STATUS.NEXT_INSTRUCTION;
         }
+        const duration = getDuration();
         const c = ctx.duration[0].children;
         const timeString = `${c.NumberLiteral[0].image} ${c.TimeUnit[0].image}`;
         if (S.commandState === null) {
           S.commandState = { timeMs: 0 };
           AutomatorData.logCommandEvent(`Pause started (waiting ${timeString})`, ctx.startLine);
-          for (const note of ctx.$notes.notes) {
-            playNote(note);
-          }
+          play(duration);
         } else {
           S.commandState.timeMs += Math.max(Time.unscaledDeltaTime.totalMilliseconds, AutomatorBackend.currentInterval);
         }
-        const finishPause = S.commandState.timeMs >= duration;
+        S.commandState.timeMs += pauseTime;
+        const percents = S.commandState.timeMs / duration;
+        
+        const finishPause = percents >= 1;
         if (finishPause) {
           AutomatorData.logCommandEvent(`Pause finished (waited ${timeString})`, ctx.startLine);
+          pauseTime = S.commandState.timeMs - duration;
           return AUTOMATOR_COMMAND_STATUS.NEXT_INSTRUCTION;
         }
+        pauseTime = 0;
         return AUTOMATOR_COMMAND_STATUS.NEXT_TICK_SAME_INSTRUCTION;
       };
     },
     blockify: ctx => {
-      const c = ctx.musicNote[0].children;
-      const blockArg = c.NoteLiteral ? c.NoteLiteral[0].image : `${c.Note[0].image}${c.NumberLiteral[0].image}`;
+      const blockArg = [];
+      if (ctx.instrument) {
+        blockArg.push(ctx.instrument[0].image);
+      }
+      blockArg.push(ctx.$notes.image);
+      if (ctx.duration) {
+        blockArg.push(ctx.duration[0].image);
+      }
       return {
         ...automatorBlocksMap.PLAY,
+        singleTextInput: blockArg.join(" ")
+      };
+    }
+  },
+  {
+    id: "track",
+    rule: $ => () => {
+      $.CONSUME(T.Track);
+      $.CONSUME(T.LCurly);
+      $.CONSUME(T.EOL);
+      $.AT_LEAST_ONE(() => $.SUBRULE($.noteData));
+      $.CONSUME1(T.RCurly);
+    },
+    validate: (ctx, V) => {
+      ctx.startLine = ctx.Track[0].startLine;
+      if (!ctx.noteData || ctx.noteData.some(d => !d.children.musicNoteList || !d.children.duration)) return false;
+      
+      const notes = {
+        notes: [],
+        durations: []
+      };
+      for (const nd of ctx.noteData) {
+        notes.notes.push(nd.children.musicNoteList.map(m => V.visit(m).notes));
+        notes.durations.push(nd.children.duration.map(d => V.visit(d)));
+      };
+      const range = instrumentsRange[player.instrument];
+      if (notes.notes.some(t => t.some(ns => ns.some(n => (n < range[0] || n >= range[1]) && n !== MUTE_INDEX)))) {
+        V.addError(ctx, `Unexpected Pitch`, `The pitches range is ${formatInt(range[0])}~${formatInt(range[1])}`);
+        return false;
+      };
+      ctx.$notes = notes;
+      
+      return true;
+    },
+    compile: ctx => {
+      const data = ctx.noteData;
+      const notes = ctx.$notes;
+      const trackAmount = notes.notes.length;
+      const noteAmount = notes.notes.map(n => n.length);
+      const instrument = player.instrument;
+      return S => {
+        if (S.commandState === null) {
+          S.commandState = {
+            timeMs: 0,
+            completedNotes: Array.repeat(0, trackAmount),
+            nextNotesTime: Array.repeat(0, trackAmount)
+          };
+        } else {
+          S.commandState.timeMs += Math.max(Time.unscaledDeltaTime.totalMilliseconds, AutomatorBackend.currentInterval);
+        }
+        S.commandState.timeMs += pauseTime;
+        for (let track = 0; track < trackAmount; track++) {
+          const index = S.commandState.completedNotes[track];
+          if ((index < noteAmount[track]) && (S.commandState.timeMs >= S.commandState.nextNotesTime[track])) {
+            for (const note of notes.notes[track][index]) {
+              if (note === MUTE_INDEX) continue;
+              playNote(note, instrument, S.commandState.nextNotesTime[track]);
+            }
+            S.commandState.nextNotesTime[track] += notes.durations[track][index]();
+            ++S.commandState.completedNotes[track];
+          }
+        }
+        
+        const finishPause = S.commandState.completedNotes.every((v, i) => v >= noteAmount[i]) && S.commandState.timeMs >= S.commandState.nextNotesTime.max();
+        pauseTime = 0;
+        if (finishPause) {
+          return AUTOMATOR_COMMAND_STATUS.NEXT_INSTRUCTION;
+        }
+        return AUTOMATOR_COMMAND_STATUS.NEXT_TICK_SAME_INSTRUCTION;
+      }
+    },
+    blockify: ctx => {
+      //TODO
+      const blockArg = ctx.LCurly[0].image;
+      return {
+        ...automatorBlocksMap.BPM,
         singleTextInput: blockArg
       };
     }
@@ -481,7 +585,7 @@ export const AutomatorCommands = [
   {
     id: "bpm",
     rule: $ => () => {
-      $.CONSUME(T.Bpm),
+      $.CONSUME(T.Bpm);
       $.OR([
         { ALT: () => $.CONSUME(T.NumberLiteral) },
         { ALT: () => $.CONSUME(T.Identifier) }
@@ -500,7 +604,7 @@ export const AutomatorCommands = [
       } else if (ctx.NumberLiteral) {
         value = parseFloat(ctx.NumberLiteral[0].image, 10);
       }
-      if (Number.isNaN(value) || !Number.isFinite(value) || value < 0.01 || value >= 1000) {
+      if (Number.isNaN(value) || !Number.isFinite(value) || value < 1 || value >= 10000) {
         V.addError(ctx, "Fail to set bpm");
         return false;
       };
@@ -510,15 +614,42 @@ export const AutomatorCommands = [
     compile: ctx => {
       return () => {
         player.bpm = ctx.$bpm;
-        AutomatorData.logCommandEvent(`Successful to set bpm to ${format(ctx.$bpm, 0, 3)}`);
+        AutomatorData.logCommandEvent(`Set bpm to ${format(ctx.$bpm, 0, 3)}`);
         return AUTOMATOR_COMMAND_STATUS.NEXT_INSTRUCTION;
       };
     },
     blockify: ctx => {
       const blockArg = ctx.NumberLiteral[0].image;
       return {
-        ...automatorBlocksMap.PLAY,
+        ...automatorBlocksMap.BPM,
         singleTextInput: blockArg
+      };
+    }
+  },
+  {
+    id: "ins",
+    rule: $ => () => {
+      $.CONSUME(T.Ins);
+      $.CONSUME(T.MusicalInstrument);
+    },
+    validate: (ctx, V) => {
+      ctx.startLine = ctx.Ins[0].startLine;
+      if (!ctx.MusicalInstrument) return false;
+      return true;
+    },
+    compile: ctx => {
+      return () => {
+        const instrument = ctx.MusicalInstrument[0].tokenType.$instrument;
+        player.instrument = instrument;
+        AutomatorData.logCommandEvent(`Successful to set instrument to ${instrument}`);
+        return AUTOMATOR_COMMAND_STATUS.NEXT_INSTRUCTION;
+      };
+    },
+    blockify: ctx => {
+      const blockArg = ctx.MusicalInstrument[0].tokenType.$instrument.toUpperCase();
+      return {
+        ...automatorBlocksMap.INS,
+        singleSelectionInput: blockArg
       };
     }
   },

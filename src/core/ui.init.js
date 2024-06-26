@@ -50,6 +50,7 @@ export const state = {
     tutorialState: 0,
     tutorialActive: true,
     h2pForcedTab: undefined,
+    musicIndex: 0
   },
   notationName: "",
   formatPreBreak: false,

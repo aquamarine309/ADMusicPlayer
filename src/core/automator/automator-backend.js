@@ -31,6 +31,8 @@ export const AUTOMATOR_TYPE = Object.freeze({
   BLOCK: 1
 });
 
+window.pauseTime = 0;
+
 /**
  * This object represents a single entry on the execution stack. It's a combination
  * of transient and persistent values -- we don't store the compiled script or indices
@@ -169,10 +171,10 @@ export const AutomatorData = {
   redoBuffer: [],
   charsSinceLastUndoState: 0,
 
-  MAX_ALLOWED_SCRIPT_CHARACTERS: 10000,
-  MAX_ALLOWED_TOTAL_CHARACTERS: 60000,
-  MAX_ALLOWED_SCRIPT_NAME_LENGTH: 15,
-  MAX_ALLOWED_SCRIPT_COUNT: 20,
+  MAX_ALLOWED_SCRIPT_CHARACTERS: 1e6,
+  MAX_ALLOWED_TOTAL_CHARACTERS: 6e6,
+  MAX_ALLOWED_SCRIPT_NAME_LENGTH: 40,
+  MAX_ALLOWED_SCRIPT_COUNT: 100,
   MAX_ALLOWED_CONSTANT_NAME_LENGTH: 20,
   // Note that a study string with ALL studies in unshortened form without duplicated studies is ~230 characters
   MAX_ALLOWED_CONSTANT_VALUE_LENGTH: 250,
@@ -452,7 +454,7 @@ export const AutomatorBackend = {
   },
 
   get currentInterval() {
-    return Math.clampMin(Math.pow(0.994, Currency.realities.value) * 500, 1);
+    return 1;
   },
 
   get currentRawText() {
@@ -959,6 +961,7 @@ export const AutomatorBackend = {
     this.state.mode = AUTOMATOR_MODE.PAUSE;
     this.hasJustCompleted = true;
     AutomatorHighlighter.clearAllHighlightedLines();
+    pauseTime = 0;
   },
 
   pause() {
@@ -979,6 +982,7 @@ export const AutomatorBackend = {
       this.state.mode = initialMode;
     }
     AutomatorData.isWaiting = false;
+    pauseTime = 0;
     if (player.options.automatorEvents.clearOnRestart) AutomatorData.clearEventLog();
   },
 

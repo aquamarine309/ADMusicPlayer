@@ -19,6 +19,8 @@ export default {
       currentChars: 0,
       totalChars: 0,
       withinLimit: false,
+      bpm: 0,
+      instrument: ""
     };
   },
   computed: {
@@ -54,6 +56,8 @@ export default {
       this.currentChars = AutomatorData.singleScriptCharacters();
       this.totalChars = AutomatorData.totalScriptCharacters();
       this.withinLimit = AutomatorData.isWithinLimit();
+      this.bpm = player.bpm;
+      this.instrument = player.instrument;
     }
   },
   template: `
@@ -78,6 +82,14 @@ export default {
         data-v-automator-tab
       >
         Across all scripts: {{ formatInt(totalChars) }} / {{ formatInt(maxTotalChars) }}
+      </span>
+      <br>
+      <span>
+        Current BPM: {{ formatInt(bpm) }}
+      </span>
+      |
+      <span>
+        Current instrument: {{ instrument }}
       </span>
       <br>
       <span

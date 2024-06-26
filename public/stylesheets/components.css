@@ -581,7 +581,7 @@
   height: calc(25% - 0.6rem);
 }
 
-.c-center [data-v-cosmetic-set-choice-modal]{
+.c-center[data-v-cosmetic-set-choice-modal]{
   display: flex;
   flex-direction: column;
   width: 38rem;

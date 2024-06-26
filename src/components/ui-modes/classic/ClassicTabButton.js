@@ -35,6 +35,11 @@ export default {
       } else {
         this.tabName = this.tab.name;
       }
+    },
+    handleClick() {
+      this.tab.show(true);
+      playNote([0, 2, 4, 5, 7, 9, 11][this.tabPosition % 7] + 12 * Math.floor(this.tabPosition / 7));
+      AutomatorPoints.click();
     }
   },
   template: `
@@ -45,7 +50,7 @@ export default {
        { 'o-tab-btn--active': isCurrentTab }]
     "
     class="o-tab-btn"
-    @click="tab.show(true)"
+    @click="handleClick"
     data-v-class-tab-button
   >
     {{ tabName }}

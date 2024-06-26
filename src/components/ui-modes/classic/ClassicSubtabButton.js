@@ -8,6 +8,10 @@ export default {
     parentName: {
       type: String,
       required: true
+    },
+    tabPosition: {
+      type: Number,
+      required: true
     }
   },
   data() {
@@ -41,13 +45,18 @@ export default {
         this.subtab.name,
         Math.max(Math.min(GameEnd.endState - (this.subtab.id) % 4 / 10, 1), 0)
       );
+    },
+    handleClick() {
+      this.subtab.show(true);
+      playNote([0, 2, 4, 5, 7, 9, 11][this.tabPosition % 7] + 12 * Math.floor(this.tabPosition / 7), "bass");
+      AutomatorPoints.click();
     }
   },
   template: `
   <button
     v-if="isAvailable"
     :class="classObject"
-    @click="subtab.show(true)"
+    @click="handleClick"
     data-v-classic-subtab-button
   >
     {{ tabName }}

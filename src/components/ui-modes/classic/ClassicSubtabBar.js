@@ -31,6 +31,7 @@ export default {
       :key="i"
       :subtab="subtab"
       :parent-name="tab.name"
+      :tab-position="i"
     />
   </div>
   `

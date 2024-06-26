@@ -52,6 +52,16 @@ export default {
     },
     isCurrentSubtab(id) {
       return player.options.lastOpenSubtab[this.tab.id] === id && Theme.currentName() !== "S9";
+    },
+    handleClick() {
+      this.tab.show(true);
+      playNote([0, 2, 4, 5, 7, 9, 11][this.tabPosition % 7] + 12 * Math.floor(this.tabPosition / 7));
+      AutomatorPoints.click();
+    },
+    handleSubtabClick(subtab, index) {
+      subtab.show(true);
+      playNote([0, 2, 4, 5, 7, 9, 11][index % 7] + 12 * Math.floor(index / 7), "bass");
+      AutomatorPoints.click();
     }
   },
   template: `
@@ -62,8 +72,8 @@ export default {
   >
     <div
       class="l-tab-btn-inner"
-      @click="tab.show(true)"
       data-v-modern-tab-button
+      @click="handleClick"
     >
       {{ tabName }}
       <div
@@ -87,7 +97,7 @@ export default {
             [tab.config.UIClass,
              {'o-subtab-btn--active': isCurrentSubtab(subtab.id)}]
           "
-          @click="subtab.show(true)"
+          @click="handleSubtabClick(subtab, index)"
           data-v-modern-tab-button
         >
           <span v-html="subtab.symbol" />

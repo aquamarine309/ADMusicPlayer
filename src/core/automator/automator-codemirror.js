@@ -59,11 +59,11 @@ const commentRule = { regex: /(\/\/|#).*/u, token: "comment", next: "start" };
 CodeMirror.defineSimpleMode("automato", {
   // The start state contains the rules that are intially used
   start: [
+    { regex: /((#|b)?[a-g][0-8])|mute/ui, token: "variable-2", next: "commandArgs" },
     commentRule,
     { regex: /studies\s+/ui, token: "keyword", next: "studiesArgs" },
     { regex: /blob\s\s/ui, token: "blob" },
-    { regex: /play\s/ui, token: "play", next: "commandArgs" },
-    { regex: /bpm\s/ui, token: "play", next: "commandArgs" },
+    { regex: /(play|bpm|ins|track)\s/ui, token: "music", next: "commandArgs" },
     {
       // eslint-disable-next-line max-len
       regex: /(auto|if|pause|studies|time[ \t]+theorems?|space[ \t]+theorems?|until|wait|while|black[ \t]+hole|stored?[ \t]+game[ \t]+time|notify)\s/ui,
@@ -83,6 +83,7 @@ CodeMirror.defineSimpleMode("automato", {
     { regex: /infinity\S+|eternity\S+|reality\S+|pause\S+|restart\S+/ui, token: "error", next: "commandDone" },
     { regex: /infinity|eternity|reality/ui, token: "keyword", next: "prestige" },
     { regex: /pause|restart/ui, token: "keyword", next: "commandDone" },
+    { regex: /\{/ui, indent: true, next: "commandDone" },
     { regex: /\}/ui, dedent: true },
     { regex: /\S+\s/ui, token: "error", next: "commandDone" },
   ],
@@ -146,8 +147,9 @@ CodeMirror.defineSimpleMode("automato", {
     { regex: /nowait(\s|$)/ui, token: "property" },
   ],
   commandArgs: [
-    { regex: /(#|b)?[a-g][1-8]/ui, token: "variable-2" },
+    { regex: /((#|b)?[a-g][0-8])|mute/ui, token: "variable-2" },
     commentRule,
+    { regex: /piano|bass|bass2/ui, token: "music" },
     { sol: true, next: "start" },
     { regex: /<=|>=|<|>/ui, token: "operator" },
     { regex: /nowait(\s|$)/ui, token: "property" },
@@ -164,11 +166,11 @@ CodeMirror.defineSimpleMode("automato", {
     { regex: /filter[ \t]+score/ui, token: "variable-2" },
     { regex: /ec(1[0-2]|[1-9])[\t ]+completions(\s|$)/ui, token: "variable-2" },
     { regex: /(am|ip|ep|all)(\s|$)/ui, token: "variable-2" },
+    { regex: / sec(onds ?) ?| min(utes ?) ?| hours ?| be(ats?)? ?/ui, token: "variable-2" },
     {
       regex: /(rm|rg|dt|tp|tt|space theorems|(banked )?infinities|eternities|realities|rep(licanti)?)(\s|$)/ui,
       token: "variable-2",
     },
-    { regex: / sec(onds ?) ?| min(utes ?) ?| hours ?/ui, token: "variable-2" },
     { regex: /([0-9]+:[0-5][0-9]:[0-5][0-9]|[0-5]?[0-9]:[0-5][0-9]|t[1-4])/ui, token: "number" },
     { regex: /-?(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?/ui, token: "number" },
     { regex: /[a-zA-Z_][a-zA-Z_0-9]*/u, token: "variable" },

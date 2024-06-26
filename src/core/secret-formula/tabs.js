@@ -176,7 +176,6 @@ export const tabs = [
     name: "Automation",
     id: 4,
     hideAt: 2.1,
-    condition: () => player.records.totalAntimatter.gte(1e40),
     hidable: true,
     subtabs: [
       {
@@ -192,7 +191,6 @@ export const tabs = [
         name: "Automator",
         symbol: "<i class='fas fa-code'></i>",
         component: "AutomatorTab",
-        condition: () => PlayerProgress.realityUnlocked(),
         id: 1,
         hidable: true,
       },
@@ -492,25 +490,6 @@ export const tabs = [
         name: "Shop",
         symbol: "$",
         component: "ShopTab",
-        id: 0,
-        hidable: true
-      }
-    ]
-  },
-  {
-    key: "leap",
-    name: "Leap",
-    UIClass: "o-tab-btn--leap",
-    hideAt: 2.5,
-    condition: () => false,//player.records.totalAntimatter.gte(100),
-    id: 11,
-    hidable: true,
-    subtabs: [
-      {
-        key: "challenges",
-        name: "Leap Challenges",
-        symbol: "◇",
-        component: "LeapChallengesTab",
         id: 0,
         hidable: true
       }

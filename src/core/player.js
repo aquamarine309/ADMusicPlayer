@@ -29,27 +29,9 @@ window.player = {
       bought: 0
     }))
   },
-  leap: {
-    challenge: {
-      initialSeed: Math.floor(Date.now() * Math.random() + 1),
-      seed: 1,
-      completedLevels: {
-        1: 0,
-        2: 0,
-        3: 0
-      },
-      current: {
-        id: 0,
-        level: 0
-      },
-      group: {
-        unlocked: 0,
-        current: 0,
-        completedBits: 0
-      }
-    }
-  },
   bpm: 120,
+  instrument: "piano",
+  clickingAP: 0,
   buyUntil10: true,
   sacrificed: DC.D0,
   achievementBits: Array.repeat(0, 17),
@@ -380,7 +362,7 @@ window.player = {
     previousRuns: {}
   },
   IPMultPurchases: 0,
-  version: 25,
+  version: 26,
   infinityPower: DC.D1,
   postC4Tier: 0,
   eternityPoints: DC.D0,

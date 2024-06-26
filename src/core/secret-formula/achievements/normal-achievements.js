@@ -5,10 +5,7 @@ export const normalAchievements = [
     id: 11,
     name: "You gotta start somewhere",
     description: "Buy a 1st Antimatter Dimension.",
-    checkEvent: GAME_EVENT.ACHIEVEMENT_EVENT_OTHER,
-    get reward() {
-      return `Unlock automator.`
-    }
+    checkEvent: GAME_EVENT.ACHIEVEMENT_EVENT_OTHER
   },
   {
     id: 12,

@@ -85,6 +85,22 @@ const AUTOMATOR_BLOCKS_COMPARISON_CURRENCIES = [
   "EC9 COMPLETIONS", "EC10 COMPLETIONS", "EC11 COMPLETIONS", "EC12 COMPLETIONS",
 ];
 
+const MUSIC_NOTES = (function() {
+  const result = [];
+  const noteList = "CDEFGAB";
+  const symbol = "#B";
+  for (let i = 0; i < noteList.length; ++i) {
+    for (let j = 0; j < symbol.length; ++j) {
+      for (let k = 1; k <= 8; ++k) {
+        result.push(`${symbol[j]}${noteList[i]}${k}`);
+      }
+    }
+  }
+  return result;
+})();
+
+const INSTRUMENTS = ["PIANO", "BASS", "BASS2"];
+
 const AUTOMATOR_BLOCKS_RESETS = ["INFINITY", "ETERNITY", "REALITY"];
 
 /**
@@ -231,8 +247,25 @@ export const automatorBlocks = [
   },
   {
     cmd: "PLAY",
-    alias: "PLAY MUSIC NOTE"
-  }
+    alias: "PLAY",
+    allowedPatterns: ["A"],
+    A: ["*"],
+    targets: ["singleTextInput"]
+  },
+  {
+    cmd: "BPM",
+    alias: "SET BPM",
+    allowedPatterns: ["A"],
+    A: ["*"],
+    targets: ["singleTextInput"]
+  },
+  {
+    cmd: "INS",
+    alias: "SET INSTRUMENT",
+    allowedPatterns: ["A"],
+    A: INSTRUMENTS,
+    targets: ["singleSelectionInput"]
+  },
 ];
 const AUTOMATOR_BLOCKS_BLACKLIST = ["BLOB"];
 

@@ -81,6 +81,7 @@ const PrestigeEvent = createCategory("PrestigeEvent");
 const StudyPath = createCategory("StudyPath");
 const TimeUnit = createCategory("TimeUnit");
 const Note = createCategory("Note");
+const MusicalInstrument = createCategory("MusicalInstrument");
 
 createInCategory(ComparisonOperator, "OpGTE", />=/, {
   $autocomplete: ">=",
@@ -275,9 +276,9 @@ createInCategory(TimeUnit, "Hours", /h(ours?)?/i, {
   $autocomplete: "hours",
   $scale: 3600 * 1000,
 });
-createInCategory(TimeUnit, "Beats", /beats?/i, {
+createInCategory(TimeUnit, "Beats", /be(ats?)?/i, {
   $autocomplete: "beat",
-  $scale: () => 6e4 / Math.max(player.bpm, 0.01),
+  $scale: 1,
 });
 
 createInCategory(Note, "C", /c/i, {
@@ -314,6 +315,22 @@ createInCategory(Note, "B", /b/i, {
   $autocomplete: "b",
   $pitch: 11
 });
+
+createInCategory(MusicalInstrument, "Piano", /piano/i, {
+  $autocomplete: "piano",
+  $instrument: "piano"
+});
+
+createInCategory(MusicalInstrument, "Bass2", /bass2/i, {
+  $autocomplete: "bass2",
+  $instrument: "bass2"
+});
+
+createInCategory(MusicalInstrument, "Bass", /bass/i, {
+  $autocomplete: "bass",
+  $instrument: "bass"
+});
+
 const Keyword = createToken({
   name: "Keyword",
   pattern: Lexer.NA,
@@ -343,7 +360,9 @@ createKeyword("Blob", /blob\s\s/i, {
   $unlocked: () => false,
 });
 createKeyword("Play", /play/i);
+createKeyword("Track", /track/i);
 createKeyword("Bpm", /bpm/i);
+createKeyword("Ins", /ins/i);
 createKeyword("If", /if/i);
 createKeyword("Load", /load/i);
 createKeyword("Notify", /notify/i);
@@ -392,12 +411,15 @@ const ECLiteral = createToken({
 
 const NoteLiteral = createToken({
   name: "NoteLiteral",
-  pattern: /(#|b)?[a-g][1-8]/i,
+  pattern: /((#|b)?[a-g][0-8])|mute/i,
   longer_alt: Identifier
 });
 
 const LCurly = createToken({ name: "LCurly", pattern: /[ \t]*{/ });
 const RCurly = createToken({ name: "RCurly", pattern: /[ \t]*}/ });
+const LBracket = createToken({ name: "LBracket", pattern: /[ \t]*\(/ });
+const RBracket = createToken({ name: "RBracket", pattern: /[ \t]*\)/ });
+const Slash = createToken({ name: "Slash", pattern: /\// });
 const Comma = createToken({ name: "Comma", pattern: /,/ });
 const Pipe = createToken({ name: "Pipe", pattern: /\|/, label: "|" });
 const Dash = createToken({ name: "Dash", pattern: /-/, label: "-" });
@@ -406,9 +428,10 @@ const Exclamation = createToken({ name: "Exclamation", pattern: /!/, label: "!" 
 // The order here is the order the lexer looks for tokens in.
 export const automatorTokens = [
   HSpace, StringLiteral, StringLiteralSingleQuote, 
+  MusicalInstrument, ...tokenLists.MusicalInstrument,
   NoteLiteral, Comment, EOL,
   ComparisonOperator, ...tokenLists.ComparisonOperator,
-  LCurly, RCurly, Comma, EqualSign, Pipe, Dash, Exclamation,
+  LCurly, RCurly, LBracket, RBracket, Comma, EqualSign, Pipe, Dash, Exclamation, Slash,
   BlackHoleStr, NumberLiteral,
   AutomatorCurrency, ...tokenLists.AutomatorCurrency,
   ECLiteral, 
@@ -423,6 +446,8 @@ export const automatorTokens = [
 // Labels only affect error messages and Diagrams.
 LCurly.LABEL = "'{'";
 RCurly.LABEL = "'}'";
+LBracket.LABEL = "'('";
+RBracket.LABEL = "')'";
 NumberLiteral.LABEL = "Number";
 Comma.LABEL = "❟";
 
@@ -464,7 +489,7 @@ export const standardizeAutomatorValues = function(x) {
 // In order to disallow individual words within command key words/phrases, we need to ignore certain patterns (mostly
 // ones with special regex characters), split the rest of them up across all spaces and tabs, and then flatten the
 // final resulting array. Note that this technically duplicates words present in multiple phrases (eg. "pending")
-const ignoredPatterns = ["Identifier", "LCurly", "RCurly"];
+const ignoredPatterns = ["Identifier", "LCurly", "RCurly", "LBracket", "RBracket"];
 export const forbiddenConstantPatterns = lexer.lexerDefinition
   .filter(p => !ignoredPatterns.includes(p.name))
   .map(p => p.PATTERN.source)

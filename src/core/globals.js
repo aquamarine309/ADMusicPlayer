@@ -108,4 +108,3 @@ export * from "./tab-notifications.js";
 export * from "./speedrun.js";
 
 export * from "./automator/script-templates.js";
-export * from "./leap-challenges.js";

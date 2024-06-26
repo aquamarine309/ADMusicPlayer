@@ -238,8 +238,6 @@ class Validator extends BaseVisitor {
         return TimeStudyTree.isValidImportString(value);
       case AUTOMATOR_VAR_TYPES.DURATION:
         return !Number.isNaN(parseInt(1000 * value, 10));
-      case AUTOMATOR_VAR_TYPES.MUSIC_NOTE:
-        return value.match(/(\+|_)?[a-g][1-8]/ui);
       default:
         throw new Error("Unrecognized variable format in automator constant lookup");
     }
@@ -261,6 +259,10 @@ class Validator extends BaseVisitor {
     let octave, pitch, offset;
     if (ctx.NoteLiteral) {
       let indexOffset = 0;
+      if (ctx.NoteLiteral[0].image === "mute") {
+        noteOut.push(MUTE_INDEX);
+        return;
+      }
       if (ctx.NoteLiteral[0].image.length === 3) {
         indexOffset = 1;
         switch (ctx.NoteLiteral[0].image[0]) {
@@ -320,6 +322,21 @@ class Validator extends BaseVisitor {
     noteOut.push(value);
     return;
   }
+  
+  instrument(ctx) {
+    if (ctx.$value) return ctx.$value;
+    if (!ctx.MusicalInstrument) {
+      this.addError(ctx, "Missing musical instrument", "Provide a unit of instrument (eg. piano or bass)");
+      return undefined;
+    };
+    const value = ctx.MusicalInstrument[0].tokenType.$instrument;
+    if (!value) {
+      this.addError(ctx, "Missing musical instrument", "Provide a unit of instrument (eg. piano or bass)");
+      return undefined;
+    }
+    ctx.$value = value;
+    return value;
+  }
 
   duration(ctx) {
     if (ctx.$value) return ctx.$value;
@@ -327,10 +344,14 @@ class Validator extends BaseVisitor {
       this.addError(ctx, "Missing time unit", "Provide a unit of time (eg. seconds or minutes)");
       return undefined;
     }
+    let number = parseFloat(ctx.NumberLiteral[0].image);
+    if (ctx.NumberLiteral[1]) {
+      number /= parseFloat(ctx.NumberLiteral[1].image);
+    }
+    const isBeat = ctx.TimeUnit[0].tokenType.tokenName === "Beats";
     const $scale = ctx.TimeUnit[0].tokenType.$scale;
-    const scale = typeof $scale === "function" ? $scale() : $scale;
-    const value = parseFloat(ctx.NumberLiteral[0].image) * scale;
-    if (isNaN(value)) {
+    const value = () => (isBeat ? 6e4 / Math.max(player.bpm, 0.01) : $scale) * number;
+    if (isNaN(value()) || !isFinite(value())) {
       this.addError(ctx, "Error parsing duration", "Provide a properly-formatted number for time");
       return undefined;
     }

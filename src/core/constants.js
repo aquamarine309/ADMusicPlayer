@@ -505,3 +505,5 @@ window.SPEEDRUN_SEED_STATE = {
   RANDOM: 2,
   PLAYER: 3,
 };
+
+window.MUTE_INDEX = -60;

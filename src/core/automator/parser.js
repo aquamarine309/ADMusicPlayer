@@ -74,6 +74,10 @@ class AutomatorParser extends Parser {
 
     $.RULE("duration", () => {
       $.CONSUME(T.NumberLiteral);
+      $.OPTION(() => {
+        $.CONSUME(T.Slash);
+        $.CONSUME1(T.NumberLiteral);
+      })
       $.CONSUME(T.TimeUnit);
     });
     
@@ -82,7 +86,7 @@ class AutomatorParser extends Parser {
         { ALT: () => $.CONSUME(T.NoteLiteral) },
         {
           ALT: () => {
-           $.CONSUME(T.Note);
+            $.CONSUME(T.Note);
             $.CONSUME(T.NumberLiteral);
           }
         },
@@ -93,7 +97,23 @@ class AutomatorParser extends Parser {
     $.RULE("musicNoteList", () => {
       $.AT_LEAST_ONE(() => $.SUBRULE($.musicNoteEntry));
     }, { resyncEnabled: false });
-
+    
+    $.RULE("noteData", () => {
+      $.CONSUME(T.LCurly);
+      $.CONSUME(T.EOL);
+      $.AT_LEAST_ONE1(() => {
+        $.SUBRULE($.musicNoteList);
+        $.SUBRULE($.duration);
+        $.OPTION(() => $.CONSUME1(T.EOL))
+      });
+      $.CONSUME(T.RCurly);
+      $.OPTION1(() => $.CONSUME2(T.EOL));
+    })
+    
+    $.RULE("instrument", () => {
+      $.CONSUME(T.MusicalInstrument);
+    })
+    
     $.RULE("eternityChallenge", () => $.OR([
       {
         ALT: () => {

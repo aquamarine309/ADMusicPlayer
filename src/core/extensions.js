@@ -1,3 +1,5 @@
+import "../../public/audio/acoustic_grand_piano-ogg.js";
+
 Array.prototype.distinct = function() {
     return this.filter(function (value, index, self) {
         return self.indexOf(value) === index;
@@ -290,41 +292,24 @@ String.isWhiteSpace = function(value) {
   return value && !value.trim();
 };
 
-window.playNote = (function() {
-  'use strict';
+window.instrumentsRange = {
+  piano: [-39, 49],
+  bass: [-20, 16],
+  bass2: [-25, 16]
+};
 
-  // コンテキストを生成
-  window.AudioContext = window.AudioContext || window.webkitAudioContext;
-  const ctx = new AudioContext();
-
-  // 音源ファイルをバイナリデータとして取得
-  const xml = new XMLHttpRequest();
-  let data;
-  xml.responseType = 'arraybuffer';
-  xml.open('GET', 'public/audio/c4.mp3', true);
-  xml.onload = function() {
-    // 音源ファイルをバイナリデータからデコード
-    ctx.decodeAudioData(
-      xml.response,
-      function(_data) {
-        data = _data;
-      }
-    );
-  };
-  xml.send();
-  const frequencyRatioMap = new Map();
-  const frequencyRatioTempered = Math.pow(2, 1 / 12);
-  return index => {
-    let frequencyRatio = 1;
-    if (frequencyRatioMap.has(index)) {
-      frequencyRatio = frequencyRatioMap.get(index);
-    } else {
-      frequencyRatio = frequencyRatioTempered ** index;
-    };
-    const bufferSource = ctx.createBufferSource();
-    bufferSource.buffer = data;
-    bufferSource.playbackRate.value = frequencyRatio;
-    bufferSource.connect(ctx.destination);
-    bufferSource.start(0);
+MIDI.loadPlugin({
+  callback: () => {
+    MIDI.setVolume(0, 127);
+    GameUI.notify.success("Soundfont loaded.");
   }
-})();
+});
+
+window.playNote = function(notes, instrument, duration, start = 0) {
+  if (!MIDI.noteOn) return;
+  if (!Array.isArray(notes)) notes = [notes];
+  MIDI.chordOn(0, notes.map(n => n + 60), 127, start);
+  if (duration) {
+    MIDI.chordOff(0, notes.map(n => n + 60), start + duration / 1000);
+  }
+};
