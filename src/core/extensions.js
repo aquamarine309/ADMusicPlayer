@@ -305,10 +305,10 @@ MIDI.loadPlugin({
   }
 });
 
-window.playNote = function(note, instrument, duration, start = 0) {
+window.playNote = function(note, instrument, duration) {
   if (!MIDI.noteOn || !MIDI.send) return;
-  MIDI.noteOn(0, note + 60, 127, start);
+  MIDI.noteOn(0, note + 60, 127, 0);
   if (duration) {
-    MIDI.chordOff(0, note + 60, start + duration / 1000);
+    MIDI.noteOff(0, note + 60, duration / 1000);
   }
 };
