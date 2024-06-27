@@ -556,11 +556,12 @@ export const AutomatorCommands = [
         for (let track = 0; track < trackAmount; track++) {
           const index = S.commandState.completedNotes[track];
           if ((index < noteAmount[track]) && (S.commandState.timeMs >= S.commandState.nextNotesTime[track])) {
+            const dur = notes.durations[track][index]();
             for (const note of notes.notes[track][index]) {
               if (note === MUTE_INDEX) continue;
-              playNote(note, instrument, S.commandState.nextNotesTime[track]);
+              playNote(note, instrument, dur);
             }
-            S.commandState.nextNotesTime[track] += notes.durations[track][index]();
+            S.commandState.nextNotesTime[track] += dur;
             ++S.commandState.completedNotes[track];
           }
         }
